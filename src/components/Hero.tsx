@@ -3,6 +3,7 @@ import {
   Compass,
   Gauge,
   Layers,
+  Sparkles,
   ShieldCheck,
   Telescope,
   type LucideIcon,
@@ -42,18 +43,21 @@ export function Hero() {
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <a
             href="#try-it"
-            className="inline-flex items-center gap-2 rounded-full bg-ink-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-ink-800"
+            className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-accent-600 to-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm shadow-accent-500/30 transition hover:from-accent-700 hover:to-indigo-700"
           >
-            See it in action
-            <ArrowDown size={14} />
+            <Sparkles size={14} aria-hidden />
+            Try it now
+            <ArrowDown
+              size={14}
+              className="transition group-hover:translate-y-0.5"
+            />
           </a>
           <a
-            href="https://github.com/AspaceB/UnifiedTLEngine#readme"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-full border border-ink-200 bg-white/70 px-5 py-2.5 text-sm font-medium text-ink-800 backdrop-blur transition hover:bg-white"
+            href="#how-it-works"
+            className="inline-flex items-center gap-2 rounded-full border border-purple-300/70 bg-purple-50/60 px-5 py-2.5 text-sm font-medium text-purple-800 backdrop-blur transition hover:border-purple-400 hover:bg-purple-100/70"
           >
             How it works
+            <ArrowDown size={14} aria-hidden />
           </a>
         </div>
 
