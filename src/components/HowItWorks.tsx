@@ -71,7 +71,7 @@ export function HowItWorks() {
           How it works
         </p>
         <h2 className="mt-1 text-2xl font-semibold tracking-tight text-ink-900 lg:text-3xl">
-          From four PDFs to one trustworthy profile, in four steps.
+          From three PDFs to one trustworthy profile, in four steps.
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-ink-600">
           The engine is deliberately not a black box. Every number on the dashboard is the result
