@@ -1,0 +1,57 @@
+# Co-host production compose for SHL UTIE on the Hetzner VPS that already
+# runs the SolePrint backend stack.
+#
+# This stack joins the existing `deploy_default` Docker network (the network
+# created by SolePrint's docker compose project named "deploy") so the
+# SolePrint Caddy reverse proxy can resolve `utle-app` and forward
+# requests for ${PUBLIC_DOMAIN} to it. We do NOT publish ports on the host —
+# Caddy is still the single public entrypoint.
+#
+# Expected layout on the host:
+#
+#   /srv/utle/
+#   └── repo/                              ← git checkout (rsynced from local)
+#       ├── Dockerfile
+#       ├── deploy/
+#       │   ├── docker-compose.prod.yml    ← this file
+#       │   └── .env.production            ← PUBLIC_DOMAIN=…
+#       └── …
+#
+# Invoke from /srv/utle/repo on the VPS:
+#
+#   docker compose -p utle \
+#                  -f deploy/docker-compose.prod.yml \
+#                  --env-file deploy/.env.production \
+#                  up -d --build
+#
+# Upgrade path:
+#   rsync new code → docker compose -p utle … up -d --build
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: utle-app
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      NEXT_TELEMETRY_DISABLED: "1"
+    expose:
+      - "3000"
+    networks:
+      - deploy_default
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  # External network owned by the SolePrint compose project (name: deploy).
+  # We attach to it rather than creating our own so Caddy can reach `utle-app`.
+  deploy_default:
+    external: true

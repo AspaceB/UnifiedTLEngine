@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.gitignore
+.dockerignore
+Dockerfile
+README.md
+SHL_UTIE_PRD.md
+deploy
+.DS_Store
+*.log
