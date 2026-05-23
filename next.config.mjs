@@ -1,9 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    serverComponentsExternalPackages: ["pdf-parse"],
-  },
+  output: "standalone",
+  serverExternalPackages: ["pdf-parse"],
   webpack: (config) => {
     // pdf-parse pulls in a debug harness that tries to read a test PDF at
     // module load; ignoring the .pdf import keeps it from breaking the bundle.
