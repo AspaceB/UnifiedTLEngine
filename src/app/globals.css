@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 90% -10%, rgba(59, 130, 246, 0.08), transparent 60%),
+    radial-gradient(800px 400px at -10% 110%, rgba(168, 85, 247, 0.06), transparent 60%),
+    #fafafb;
+  color: #1f1f23;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
