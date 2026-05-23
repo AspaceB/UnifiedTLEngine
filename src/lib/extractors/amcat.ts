@@ -34,7 +34,24 @@ const AMCAT_KNOWN: readonly string[] = [
   "communication",
   "problem solving",
   "debugging",
+  "basic computer literacy",
+  "internet ability",
+  "inductive reasoning",
+  "deductive reasoning",
 ];
+
+// Score-report variants from myamcat.com smash the table columns when
+// extracted via pdf-parse: "English67599.3%" = label "English" + 3-digit
+// AMCAT score (range 100–900) + percentile (0–100, optional decimal) + "%".
+// We anchor on each known module name and parse the trailing percentile;
+// the score itself is discarded — only percentile feeds the inference engine.
+const AMCAT_KNOWN_PATTERN = AMCAT_KNOWN
+  .map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s*"))
+  .join("|");
+const PCT_SMASHED = new RegExp(
+  `(${AMCAT_KNOWN_PATTERN})\\s*\\d{3}\\s*(\\d{1,3}(?:\\.\\d+)?)\\s*%`,
+  "gi",
+);
 
 const PCT_LINE = /^([A-Za-z][A-Za-z \-']{2,40})\s+(?:score\s*)?(?:\(?\s*(?:percentile|%ile|pct|%)?\s*\)?\s*)?(\d{1,3})(?:\s*(?:percentile|%ile|pct|%))?\s*$/gim;
 const PCT_INLINE = /([A-Za-z][A-Za-z \-']{2,40})\s*[:=\-]\s*(\d{1,3})(?:\s*(?:percentile|%ile|pct|%))?/gi;
@@ -87,21 +104,38 @@ export class AMCATExtractor implements ParseStrategy {
       }
     }
 
-    // Second pass: AMCAT skill modules (only if we haven't already filled from AMPI,
-    // since AMPI text contains body paragraphs that can trick the generic regex).
-    if (Object.keys(raw).length === 0) {
-      for (const re of [PCT_LINE, PCT_INLINE]) {
-        re.lastIndex = 0;
-        let m: RegExpExecArray | null;
-        while ((m = re.exec(text)) !== null) {
-          const label = m[1].trim().toLowerCase();
-          const value = Number(m[2]);
-          if (!Number.isFinite(value) || value < 1 || value > 99) continue;
-          if (!AMCAT_KNOWN.some((k) => label.includes(k))) continue;
-          const key = camelCase(label);
-          if (raw[key] === undefined) raw[key] = value;
-        }
+    // Second pass: AMCAT skill modules. Always runs (real reports often carry
+    // both AMPI traits AND module percentiles — gating one on the other dropped
+    // half the data). We still anchor strictly on known module labels, so the
+    // AMPI body prose can't accidentally feed the generic line/inline regexes.
+    for (const re of [PCT_LINE, PCT_INLINE]) {
+      re.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(text)) !== null) {
+        const label = m[1].trim().toLowerCase();
+        const value = Number(m[2]);
+        if (!Number.isFinite(value) || value < 1 || value > 99) continue;
+        if (!AMCAT_KNOWN.some((k) => label.includes(k))) continue;
+        const key = camelCase(label);
+        if (raw[key] === undefined) raw[key] = value;
       }
+    }
+
+    // Third pass: column-smashed score tables (myamcat.com layout where
+    // pdf-parse glues "Module · Score · Percentile" into one token).
+    PCT_SMASHED.lastIndex = 0;
+    let sm: RegExpExecArray | null;
+    while ((sm = PCT_SMASHED.exec(text)) !== null) {
+      const label = sm[1].replace(/\s+/g, " ").trim().toLowerCase();
+      const pctRaw = Number(sm[2]);
+      if (!Number.isFinite(pctRaw) || pctRaw < 0 || pctRaw > 100) continue;
+      // Round the decimal percentile and clamp to the 1..99 scale the rest of
+      // the pipeline expects (100th percentile reports "Internet Ability850100%"
+      // are real — don't drop them).
+      const value = Math.round(pctRaw);
+      const clamped = Math.min(99, Math.max(1, value));
+      const key = camelCase(label);
+      if (raw[key] === undefined) raw[key] = clamped;
     }
 
     if (Object.keys(raw).length === 0) {

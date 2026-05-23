@@ -69,6 +69,66 @@ const QUALITATIVE_VARIANTS: ReadonlyArray<{ test: RegExp; name: string }> = [
   { test: VARIANT_DERAILMENT, name: "Derailment Report" },
 ];
 
+// Normalise a line for trait-name comparison: lowercase, hyphen → space,
+// collapse whitespace. "Independent-Minded" and "INDEPENDENT MINDED" both
+// reduce to "independent minded".
+function normaliseLine(s: string): string {
+  return s.toLowerCase().replace(/[-‐‑‒–—]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+// Pair each standalone-digit line with its nearest unpaired known trait
+// name within a small line window. Handles both:
+//   chart layout: digit→…descriptor lines…→TraitName
+//   TC    layout: TraitName→…descriptor lines…→digit
+function extractByProximity(text: string): Record<string, number> {
+  const lines = text.split(/\r?\n/);
+  const STANDALONE_DIGIT = /^\s*(10|[1-9])(?:\s*\/\s*10)?\s*$/;
+
+  const stenAt: Array<{ line: number; value: number }> = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = STANDALONE_DIGIT.exec(lines[i]);
+    if (m) stenAt.push({ line: i, value: Number(m[1]) });
+  }
+
+  const traitAt: Array<{ line: number; key: string }> = [];
+  for (let i = 0; i < lines.length; i++) {
+    const norm = normaliseLine(lines[i]);
+    if (!norm) continue;
+    for (const known of OPQ_KNOWN) {
+      if (norm === known) {
+        traitAt.push({ line: i, key: camelCase(known) });
+        break;
+      }
+    }
+  }
+
+  // Window of 8 lines covers the typical block height (low descriptor + name +
+  // high descriptor across 4–6 lines, with some breathing room).
+  const WINDOW = 8;
+  const out: Record<string, number> = {};
+  const usedTrait = new Set<number>();
+
+  for (const sten of stenAt) {
+    let best = -1;
+    let bestDist = Infinity;
+    for (let t = 0; t < traitAt.length; t++) {
+      if (usedTrait.has(t)) continue;
+      const dist = Math.abs(traitAt[t].line - sten.line);
+      if (dist <= WINDOW && dist < bestDist) {
+        bestDist = dist;
+        best = t;
+      }
+    }
+    if (best >= 0) {
+      const { key } = traitAt[best];
+      if (out[key] === undefined) out[key] = sten.value;
+      usedTrait.add(best);
+    }
+  }
+
+  return out;
+}
+
 export class OPQ32Extractor implements ParseStrategy {
   readonly source = "OPQ32" as const;
 
@@ -96,6 +156,17 @@ export class OPQ32Extractor implements ParseStrategy {
         // Keep the first hit per trait — earlier patterns are stricter.
         if (raw[key] === undefined) raw[key] = value;
       }
+    }
+
+    // Fallback: SHL's "Profile" and "Profile Chart" layouts render each trait
+    // as a block where the STEN digit sits alone on its own line either just
+    // BEFORE the trait name (chart layout) or just AFTER it (TC layout), with
+    // 2–6 lines of low/high descriptor text in between. The regex passes
+    // above can't see that pairing — they only catch labels glued to digits.
+    // Pair each standalone digit to its nearest known trait by line distance.
+    const proximityHits = extractByProximity(text);
+    for (const [k, v] of Object.entries(proximityHits)) {
+      if (raw[k] === undefined) raw[k] = v;
     }
 
     if (Object.keys(raw).length === 0) {
