@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { ShieldCheck } from "lucide-react";
 
 import type {
   CompositeScore,
@@ -125,59 +124,61 @@ export function Dashboard() {
   const hasAny = aggregated.readySources.length > 0;
 
   return (
-    <main className="mx-auto max-w-[1400px] px-6 py-10">
-      <header className="mb-8 flex items-start justify-between gap-6">
-        <div>
-          <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-ink-200 bg-white/70 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-ink-600">
-            <ShieldCheck size={12} className="text-accent-600" />
-            Decision support · advisory only
+    <section
+      id="try-it"
+      className="relative scroll-mt-8 border-t border-ink-200/60 bg-white/40 backdrop-blur"
+    >
+      <div className="mx-auto max-w-[1400px] px-6 py-12 lg:py-16">
+        <header className="mb-8">
+          <p className="text-xs font-semibold uppercase tracking-wider text-accent-600">
+            Try it now
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight text-ink-900">
-            Unified Talent Intelligence Engine
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-ink-600">
-            Drop one report per silo. The pipeline extracts, normalises STEN/percentile to a common
-            metric, infers validated composites, and surfaces a confidence band — all client-side
-            after a single POST to <code className="font-mono text-xs">/api/ingest</code>.
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-ink-900 lg:text-3xl">
+            Drop a report. Watch the profile build itself.
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm text-ink-600">
+            One PDF per source on the left. The radar on the right updates as the engine reads
+            each report, normalises the scores onto a common scale, and computes composite scores
+            with a confidence band drawn directly on the chart.
           </p>
-        </div>
-      </header>
+        </header>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
-        <section className="space-y-4">
-          {(Object.keys(SOURCE_META) as SourceSystem[]).map((s) => (
-            <SourceDropzone
-              key={s}
-              source={s}
-              meta={SOURCE_META[s]}
-              state={sources[s]}
-              onFile={(file) => handleFile(s, file)}
-              onReset={() => handleReset(s)}
-            />
-          ))}
-        </section>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
+          <section className="space-y-4">
+            {(Object.keys(SOURCE_META) as SourceSystem[]).map((s) => (
+              <SourceDropzone
+                key={s}
+                source={s}
+                meta={SOURCE_META[s]}
+                state={sources[s]}
+                onFile={(file) => handleFile(s, file)}
+                onReset={() => handleReset(s)}
+              />
+            ))}
+          </section>
 
-        <section className="space-y-6">
-          <div className="rounded-2xl border border-ink-200 bg-white/80 p-6 shadow-sm backdrop-blur">
-            <div className="mb-4 flex items-baseline justify-between">
-              <div>
-                <h2 className="text-base font-semibold text-ink-900">Composite radar</h2>
-                <p className="text-xs text-ink-600">
-                  {hasAny
-                    ? `Computed across ${aggregated.readySources.join(" · ")}. Missing inputs widen the band.`
-                    : "Upload one or more reports to populate the radar."}
-                </p>
+          <section className="space-y-6">
+            <div className="rounded-2xl border border-ink-200 bg-white/80 p-6 shadow-sm backdrop-blur">
+              <div className="mb-4 flex items-baseline justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-ink-900">Composite radar</h3>
+                  <p className="text-xs text-ink-600">
+                    {hasAny
+                      ? `Computed across ${aggregated.readySources.join(" · ")}. Missing inputs widen the band.`
+                      : "Upload one or more reports to populate the radar."}
+                  </p>
+                </div>
+                <span className="rounded-full bg-ink-100 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-ink-600">
+                  {aggregated.composites.filter((c) => c.score !== null).length} / {aggregated.composites.length} composites
+                </span>
               </div>
-              <span className="rounded-full bg-ink-100 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-ink-600">
-                {aggregated.composites.filter((c) => c.score !== null).length} / {aggregated.composites.length} composites
-              </span>
+              <CompositeRadar composites={aggregated.composites} />
             </div>
-            <CompositeRadar composites={aggregated.composites} />
-          </div>
 
-          <ConfidencePanel confidence={aggregated.confidence} composites={aggregated.composites} />
-        </section>
+            <ConfidencePanel confidence={aggregated.confidence} composites={aggregated.composites} />
+          </section>
+        </div>
       </div>
-    </main>
+    </section>
   );
 }
